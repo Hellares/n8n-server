@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Servidor N8N
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-server
+    ports:
+      - "5678:5678"
+    environment:
+      # Autenticación básica
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=Admin123!
+      
+      # Configuración de red
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      
+      # URL del webhook (cambiar por la IP de tu VPS)
+      - WEBHOOK_URL=http://86.48.26.221:5678
+      
+      # Configuración regional
+      - GENERIC_TIMEZONE=America/Lima
+      - N8N_DEFAULT_LOCALE=es
+      
+      # Base de datos (usando SQLite por simplicidad)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      
+      # Configuraciones adicionales
+      - N8N_METRICS=true
+      - N8N_LOG_LEVEL=info
+      - N8N_SECURE_COOKIE=false
+      
+      # Permitir todas las URLs para webhooks
+      - N8N_SKIP_WEBHOOK_DEREGISTRATION_SHUTDOWN=true
+    
+    volumes:
+      # Persistir datos de N8N
+      - n8n_data:/home/node/.n8n
+      # Carpeta para backups
+      - ./n8n-backups:/backups
+      # Logs personalizados
+      - ./n8n-logs:/var/log/n8n
+    
+    networks:
+      - elastika-network
+    
+    restart: unless-stopped
+    
+    # Healthcheck para monitorear el servicio
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  n8n_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/n8n/data
+
+networks:
+  elastika-network:
+    external: true
